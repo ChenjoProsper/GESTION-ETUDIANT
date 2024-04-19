@@ -1,148 +1,151 @@
-const readline = require('readline');
-const { Client } = require('pg');
-
+const readline = require('readline')
+const {Client} = require('pg')
 const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
+    input: process.stdin,
+    output: process.stdout,
 });
-
-const client = new Client({
-  user: 'toto',
-  host: 'localhost',
-  database: 'test',
-  password: '1234',
-  port: 5432, 
-});
-
-
-function afficherMenu() {
-  console.log('\n\nMenu :\n');
-  console.log('1. Ajouter un étudiant');
-  console.log('2. Afficher tous les étudiants');
-  console.log('3. Mettre à jour un étudiant');
-  console.log('4. Supprimer un étudiant');
-  console.log('5. Rechercher un étudiant');
-  console.log('6. Quitter\n');
+function afficheConnexion(){
+    console.log("\n\n*******************Connexion*********************\n")
+    console.log("1: Se connecter")
+    console.log("2: Quitter")
 }
-
-
-async function ajouterEtudiant() {
-  rl.question('Entrez le nom de l\'étudiant : ', async (nom) => {
-    rl.question('Entrez le prénom de l\'étudiant : ', async (prenom) => {
-      rl.question('Entrez l\'âge de l\'étudiant : ', async (age) => {
-        try {
-          const res = await client.query("INSERT INTO etudiant (nom, prenom, age) VALUES ($1, $2, $3)", [nom, prenom, age]);
-          console.log('Étudiant ajouté avec succès');
-        } catch (err) {
-          console.error('Erreur lors de l\'ajout de l\'étudiant', err);
-        } finally {
-          menuPrincipal();
-          }
-      });
-    });
-  });
+function afficheMenu(){
+    console.log("\n\n*******************Menu Principale*********************\n")
+    console.log("1:Ajouter un etudiant")
+    console.log("2:Modifier un etudiant")
+    console.log("3:Supprimer un etudiant")
+    console.log("4:Recherche un etudiant")
+    console.log("5:Afficher les etudiants")
+    console.log("6:Se deconnecter\n")
 }
-
-// Fonction pour afficher tous les étudiants
-async function afficherEtudiants() {
-  try {
-    const res = await client.query("SELECT * FROM etudiant");
-    console.log('Liste des étudiants :', res.rows);
-  } catch (err) {
-    console.error('Erreur lors de la récupération des étudiants', err);
-  } finally {
-    menuPrincipal();
-  }
+function connexion(){
+    rl.question("Nom de la base de donnee: ",(bd_name)=>{
+        rl.question("Nom de l'utilisateur: ",(user)=>{
+            rl.question("Password: ",(password)=>{
+                try{
+                    const client = new Client({
+                        user: user,
+                        database: bd_name,
+                        host:'localhost',
+                        port: '5432',
+                        password: password,
+                    });
+                    client.connect()
+                    console.log('Connecté à la base de données');
+                    menuPrincipal(client)
+                }catch{
+                    console.log("Erreur de connexion");
+                    menuConnexion();
+                }
+            })
+        })
+    })
 }
-
-async function rechercheEtudiant() {
-  rl.question('Entrer l\'id de l\'etudiant rechercher: ',async (id) =>{
-    try {
-      const res = await client.query("SELECT * FROM etudiant WHERE id = $1", [id]);
-      console.log('Etudiant recherché :', res.rows);
-      // rl.close();
-    } catch (err) {
-      console.error('Erreur lors de la récupération des étudiants', err);
-    } finally {
-      menuPrincipal();
-    }
-  })
-}
-
-
-// Fonction pour mettre à jour un étudiant
-async function mettreAJourEtudiant() {
-  rl.question('Entrez l\'ID de l\'étudiant à mettre à jour : ', async (id) => {
-    rl.question('Entrez le nouveau nom de l\'étudiant : ', async (nom) => {
-      rl.question('Entrez le nouveau prénom de l\'étudiant : ', async (prenom) => {
-        rl.question('Entrez le nouvel âge de l\'étudiant : ', async (age) => {
-          try {
-            const res = await client.query("UPDATE etudiant SET nom = $2, prenom = $3, age = $4 WHERE id = $1", [id, nom, prenom, age]);
-            console.log('Étudiant mis à jour avec succès');
-          } catch (err) {
-            console.error('Erreur lors de la mise à jour de l\'étudiant', err);
-          } finally {
-            // rl.close();
-            menuPrincipal();
-          }
+async function ajouter(client){
+    rl.question('Nom: ', async (nom) => {
+        rl.question('Prenom: ', async (prenom) => {
+            rl.question('Age: ', async (age) => {
+                try{
+                    const res = await client.query("INSERT INTO etudiant (nom, prenom, age) VALUES($1, $2, $3)" , [nom,prenom,age]);
+                    console.log("Ajouter");
+                }catch(err){
+                    console.log("Nous avons rencontrer une erreur",err);
+                }finally{
+                    menuPrincipal(client);
+                }
+            });
         });
-      });
     });
-  });
 }
-
-// Fonction pour supprimer un étudiant
-async function supprimerEtudiant() {
-  rl.question('Entrez l\'ID de l\'étudiant à supprimer : ', async (id) => {
+async function modifier(client){
+    rl.question("Id de l'etudiant cible: ", async (id) =>{
+        rl.question("Nouveau nom: ",async (nom)=>{
+            try{
+                const res = await client.query("UPDATE etudiant SET nom = $1 where id = $2 ",[nom,id])
+                console.log("modification effectuer")
+            }catch(err){
+                console.log("Nous avons rencontrer un probleme ",err)
+            }finally{
+                menuPrincipal(client)
+            }
+        })
+    })
+}
+async function supprimer(client){
+    rl.question("Id de l'etudiant cible: ", async (id)=>{
+        try{
+            const res = await client.query("DELETE FROM etudiant WHERE id = $1",[id])
+            console.log("suppression effectuer")
+        }catch(err){
+            console.log("Nous avons rencontrer un probleme ",err)
+        }finally{
+            menuPrincipal(client)
+        }
+    })
+}
+async function recherche(client){
+    rl.question("Id de l'etudiant cible: ", async (id)=>{
+        try{
+            const res = await client.query("SELECT * FROM etudiant WHERE id = $1",[id])
+            console.log("Etudiant rechercher: ",res.rows)
+        }catch(err){
+            console.log("Nous avons rencontrer un probleme ",err)
+        }finally{
+            menuPrincipal(client)
+        }
+    })
+}
+async function afficher(client){
     try {
-      const res = await client.query("DELETE FROM etudiant WHERE id = $1", [id]);
-      console.log('Étudiant supprimé avec succès');
+        const res = await client.query("SELECT * FROM etudiant");
+        console.log('Liste des étudiants :', res.rows);
     } catch (err) {
-      console.error('Erreur lors de la suppression de l\'étudiant', err);
+        console.error('Erreur lors de la récupération des étudiants', err);
     } finally {
-      // rl.close();
-      menuPrincipal();
+        menuPrincipal(client);
     }
-  });
 }
-
-// Fonction pour gérer le menu principal
-function menuPrincipal() {
-  afficherMenu();
-  rl.question('Que souhaitez-vous faire : ', (choix) => {
-    switch (choix) {
-      case '1':
-        ajouterEtudiant();
-        break;
-      case '2':
-        afficherEtudiants();
-        break;
-      case '3':
-        mettreAJourEtudiant();
-        break;
-      case '4':
-        supprimerEtudiant();
-        break;
-      case '5':
-        rechercheEtudiant();
-        break;
-      case '6':
-        client.end();
-        console.log('Programme terminé.');
-        process.exit();
-        break;
-      default:
-        console.log('Choix invalide. Veuillez saisir un nombre entre 1 et 5.');
-        menuPrincipal();
-        break;
-    }
-  });
+function menuPrincipal(client){
+    afficheMenu()
+    rl.question("Choix: ",(Option)=>{
+        switch(Option){
+            case '1':
+                ajouter(client);
+                break;
+            case '2':
+                modifier(client);
+                break;
+            case '3':
+                supprimer(client);
+                break;
+            case '4':
+                recherche(client);
+                break;
+            case '5':
+                afficher(client)
+                break
+            case '6':
+                console.log("Deconnection")
+                client.end()
+                menuConnexion()
+            }
+        })
 }
-
-// Démarrer le programme
-client.connect()
-  .then(() => {
-    console.log('Connecté à la base de données');
-    menuPrincipal();
-  })
-  .catch(err => console.error('Erreur de connexion', err));
+function menuConnexion(){
+    afficheConnexion()
+    rl.question("Option: ",(option)=>{
+    switch(option){
+        case '1':
+            console.log("\n\nVeiller remplir ces informatoins afin de vous connecter\n")
+            connexion()
+            break;
+        case '2':
+            console.log("Au revoir")
+            process.exit()
+        default:
+            console.log("Erruer de choix")
+            menuConnexion()
+        }
+    })
+}
+menuConnexion()
